@@ -137,9 +137,19 @@ print('The  shape of test images are :',testimage.shape)
 
 
 inputs = tf.keras.layers.Input((img_height, img_width, img_channels))
+data_augmentation = keras.Sequential(
+  [
+    layers.RandomFlip("horizontal",
+                      input_shape=(img_height,
+                                   img_width,
+                                   3)),
+    layers.RandomRotation(0.1),
+    layers.RandomZoom(0.1),
+  ]
+)(inputs)
 
 
-c1 = tf.keras.layers.Conv2D(16, 5, activation='relu', kernel_initializer='he_normal', padding='same')(inputs)
+c1 = tf.keras.layers.Conv2D(16, 5, activation='relu', kernel_initializer='he_normal', padding='same')(data_augmentation)
 c1 = tf.keras.layers.Dropout(0.4)(c1)
 p1 = tf.keras.layers.MaxPooling2D((2, 2))(c1)
 
@@ -154,19 +164,22 @@ p3 = tf.keras.layers.MaxPooling2D((2, 2))(c3)
 
 p4=tf.keras.layers.Flatten()(p3)
 p5=tf.keras.layers.Dense(256, activation='relu')(p4)
+p5 = tf.keras.layers.Dropout(0.6)(p5)
 
 p6 = tf.keras.layers.Dense(128, activation='relu')(p5)
-p6 = tf.keras.layers.Dropout(0.4)(p6)
+p6 = tf.keras.layers.Dropout(0.5)(p6)
 
 p7 = tf.keras.layers.Dense(64, activation='relu')(p6)
 p7 = tf.keras.layers.Dropout(0.4)(p7)
 
-outputs = tf.keras.layers.Dense(classlength, activation='softmax')(p7)
+outputs = tf.keras.layers.Dense(classlength, activation='sigmoid')(p7)
 
 
 model = tf.keras.Model(inputs=[inputs], outputs=[outputs])
 
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer='adam',
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
 model.summary()
 
 checkpointer = tf.keras.callbacks.ModelCheckpoint('model_for_nuclei.h5', verbose=1, save_best_only=True)
